@@ -6,39 +6,23 @@ import numpy as np
 parameters["form_compiler"]["representation"] = "uflacs"
 parameters["form_compiler"]["cpp_optimize"] = True
 
-
-'''
-new set of tests including sparks as multiplicative random variable on mu 
-
-and with a smaller active stress. We now replicate an oscillatory regime, but with the correct magnitudes of displacements. 
-
-PLOT: for mu=0.3, lam = 0.1, and different values of T0 
-BEST FIT: mu03_lam01_T0100
-
-
-
-'''
-
 mesh = Mesh("disk_small.xml")
 
-#mu = Constant(0.288); lam = Constant(0.15); c0 = Constant(0.485044)
+#mu = Constant(0.288); lam = Constant(0.01); c0 = Constant(0.485044)
 #mu = Constant(0.288); lam = Constant(0.1); c0 = Constant(0.485044)
 #mu = Constant(0.288); lam = Constant(0.5); c0 = Constant(0.682438894226448)
 #mu = Constant(0.288); lam = Constant(1.3); c0 = Constant(0.9577649304341815)
-mu = Constant(0.3); lam = Constant(0.15); c0 = Constant(0.6038550678759639)
-#---------------
-#mu = Constant(0.3); lam = Constant(0.1); c0 = Constant(0.6038550678759639)
-#---------------
+#mu = Constant(0.3); lam = Constant(0.01); c0 = Constant(0.6038550678759639)
+mu = Constant(0.3); lam = Constant(0.1); c0 = Constant(0.6038550678759639)
 #mu = Constant(0.3); lam = Constant(0.5); c0 = Constant(0.682438894226448)
 #mu = Constant(0.3); lam = Constant(1.3); c0 = Constant(1.0136302384480085)
 
-#T0      = Constant(100.) #Pa ZSeT
-T0      = Constant(250.) #Pa ZNeW
+T0      = Constant(100.) #Pa ZSeT
+#T0      = Constant(250.) #Pa ZNeW
 #T0      = Constant(450.) #Pa  ZReW
 
-
-fileO = XDMFFile(mesh.mpi_comm(), "outputs/ZSeT-mu03-lam015-T0250.xdmf")
-outfile = open("mysol_mu03_lam015_T0250.txt","w")
+fileO = XDMFFile(mesh.mpi_comm(), "outputs/ZSeT-mu03-lam01-T0100.xdmf")
+outfile = open("mysol_mu03_lam01_T100.txt","w")
 
 fileO.parameters['rewrite_function_mesh']=False
 fileO.parameters["functions_share_mesh"] = True
@@ -99,9 +83,6 @@ alpha2_ = Constant(550.) #Pa.s
 E0     = Constant(44.26)   #Pa
 E1     = Constant(24.34)   #Pa
 E = Expression('pow(x[0],2)+pow(x[1],2) <1.99? E0 : E1', E0=E0, E1=E1, degree = 0)
-#nu0    = Constant(0.4)
-#nu1    = Constant(0.3)
-#nu = Expression('pow(x[0],2)+pow(x[1],2) <1.99? nu0 : nu1', nu0=nu0, nu1=nu1, degree = 0)
 nu = Constant(0.4)
 
 
@@ -109,7 +90,7 @@ alpha1 = alpha1_*(1+nu)/(E*tauj)
 alpha2 = alpha2_*(1+nu)*(1-2*nu)/(E*nu*tauj)
 
 beta1 = T0*(1+nu)/E
-beta2 = Constant(1.0) #1/(k1**2)
+beta2 = Constant(1.0)
 
 # ********* Initial conditions ******* #
 
@@ -132,7 +113,7 @@ Ih = Expression('1+a*exp(-r*(pow(x[0]-q0,2)+pow(x[1]-q1,2)))', a=0, r=ra, q0=0, 
 amplj=[]; x0=[]; y0=[]
 
 for j in range(samples):
-    amplj.append(0.18+0.025*(j+1)**2/samples) # it was 20*(j+1)/samples. Now it is quadratic!! 
+    amplj.append(0.18+0.025*(j+1)**2/samples)
     x0.append(some_points[j][0])
     y0.append(some_points[j][1])
     
@@ -147,7 +128,7 @@ ELeft = (1+alpha1/dt)*inner(strain(u),strain(v)) * dx \
 
 ERight = alpha1/dt * inner(strain(uold),strain(v)) * dx \
          - alpha2/dt * pold * div(v) * dx \
-         - beta1*ch/(beta2+ch) * div(v) * dx # IT USED TO BE +!
+         - beta1*ch/(beta2+ch) * div(v) * dx
 
 for i, ns_i in enumerate(nullspace):
     chi = s_chi[i]
@@ -183,18 +164,10 @@ while (t <= Tfinal + dt):
     u,p,chi = solE.split()    
     assign(uh,u)
 
-    #mesh1 = Mesh(mesh)
-    #X = mesh1.coordinates()
-    #X += np.vstack(map(u, X))
-    #volume_after = assemble(Constant(1)*dx(domain=mesh1))
     volume_after = assemble(det(Identity(2) + grad(u))*dx)
     volu.append(volume_after)
     print(float(t+10), volu[inc], file = outfile)
     
-
-    # print(' is this going down? ', int(Tfinal/(10*dt) + (50*dt**2-Tfinal)*t/(300*dt))+1.5)
-    # SPARKS:  linear decay of frequency
-    #y_a = Tfinal/(10*dt); y_b = 3*dt; t_a = 0; t_b = Tfinal;
     y_a = 1/0.075; y_b = 1/0.38; t_a = 0; t_b = Tfinal; 
     
     if (inc % int(y_a + (y_b-y_a)/(t_b-t_a)*(t-t_a)+1.5) == 0 and t>0.5):
@@ -224,22 +197,3 @@ while (t <= Tfinal + dt):
     t += dt; inc += 1
     
 # ************* End **************** #
-
-
-'''
-Katerina original data 
-
-µ = 0.288 , λ = 0 , cStSt = 0.1777569513900799 : solitary wave
-µ = 0.288 , λ = 0.1 , cStSt = 0.48504433614355585 : periodic wavetrain
-µ = 0.288 , λ = 0.5 , cStSt = 0.682438894226448 : periodic wavetrain but slower speed
-µ = 0.288 , λ = 1.3 , cStSt = 0.9577649304341815 : decaying wavetrain
-µ = 0.288 , λ = 2 , cStSt = 1.1981692211685526 : very decaying wavetrain
-
-µ = 0.3 , λ = 0 , cStSt = 0.5563278750155162 : periodic wavetrain
-µ = 0.3 , λ = 0.1 , cStSt = 0.6038550678759639 : periodic wavetrain but slower speed
-µ = 0.3 , λ = 0.5 , cStSt = 0.682438894226448 : periodic wavetrain but (even) slower speed
-µ = 0.3 , λ = 1.3 , cStSt = 1.0136302384480085 : decaying wavetrain
-µ = 0.3 , λ = 2 , cStSt = 1.2505584520106665 : very decaying wavetrain
-µ = 0.5 , λ = 0 , cStSt = 1.3322905620049688 : decaying wavetrain
-
-'''
